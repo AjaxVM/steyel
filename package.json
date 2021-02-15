@@ -1,0 +1,29 @@
+{
+  "name": "steyel",
+  "version": "0.0.1",
+  "description": "Webpack plugin that wraps css-loader to provide a robust pattern for css modules and overwriting",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AjaxVM/steyel.git"
+  },
+  "author": "Matthew Roe",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AjaxVM/steyel/issues"
+  },
+  "homepage": "https://github.com/AjaxVM/steyel#readme",
+  "peerDependencies": {
+    "css-loader": "^5.0.0",
+    "webpack": "^5.0.0"
+  },
+  "devDependencies": {
+    "css-loader": "^5.0.2",
+    "jest": "^26.6.3",
+    "memfs": "^3.2.0",
+    "webpack": "^5.22.0"
+  }
+}
