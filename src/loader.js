@@ -28,7 +28,7 @@ function deepMerge(objA, objB) {
 const defaultCssLoaderOptions = {
   modules: {
     mode: 'pure',
-    localIdentName: 'steyel-[hash:base64:5]',
+    localIdentName: 'steyel-[hash:base64]',
   }
 }
 
