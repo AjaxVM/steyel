@@ -27,7 +27,8 @@ function deepMerge(objA, objB) {
 
 const defaultCssLoaderOptions = {
   modules: {
-    mode: 'pure'
+    mode: 'pure',
+    localIdentName: 'steyel-[hash:base64:5]',
   }
 }
 
@@ -82,7 +83,7 @@ module.exports = function (source) {
   out = cssLoader.call({
     ...this,
     async: innerAsync,
-    query: deepMerge(defaultCssLoaderOptions, this.query.cssLoaderConfig && this.query.cssLoaderConfig.options)
+    query: deepMerge(defaultCssLoaderOptions, this.query.cssLoaderOptions)
   }, out)
 
   return
