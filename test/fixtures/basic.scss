@@ -1,0 +1,7 @@
+@import "/test/fixtures/basic2.scss";
+
+$body-color: #fff;
+
+.root .child {
+  background-color: $body-color;
+}

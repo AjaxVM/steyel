@@ -3,7 +3,7 @@ const webpack = require('webpack')
 const { createFsFromVolume, Volume } = require('memfs')
 
 module.exports = {
-  getCompiler: (fixture, options = {}) => {
+  getCompiler: (fixture, config = {}) => {
     const compiler = webpack({
       context: __dirname,
       entry: `./${fixture}`,
@@ -14,11 +14,11 @@ module.exports = {
       module: {
         rules: [
           {
-            test: /\.css$/,
-            use: {
+            test: config.test || /\.css$/,
+            use: [{
               loader: path.resolve(__dirname, '../src'),
-              options,
-            },
+              options: config.options,
+            }].concat(config.preLoaders || []),
           },
         ],
       },
