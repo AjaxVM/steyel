@@ -3,7 +3,7 @@ const postcss = require('postcss')
 const postCssWrap = require('./postcss-wrap')
 
 const data = `
-.root h1 .child {}
+/*.root h1 .child {}
 
 .root.active {}
 
@@ -18,9 +18,9 @@ const data = `
   .somewhere {}
 }
 
-div.foo >.monkey {}
+div.foo >.monkey {}*/
 
-.root .child :local(.monkey) {}
+.root .child :global :local(.monkey) {}
 `
 
 // const stuff = css(data)

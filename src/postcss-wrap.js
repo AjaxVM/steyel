@@ -10,6 +10,13 @@ const CHAR_MAPPING = {
   '': 'mapWhitespace'
 }
 
+function matchVals(obj, prop, value) {
+  if (Array.isArray(value)) {
+    return value.includes(obj[prop])
+  }
+  return obj[prop] === value
+}
+
 class Mapper {
   executeMapping(char) {
     const func = CHAR_MAPPING[char] && this[CHAR_MAPPING[char]] || this.default
@@ -91,6 +98,40 @@ class SelectorObj extends Mapper {
   format() {
     return [...this.value.map(val => val.format())].join(' ')
   }
+
+  findValues(type, prop, propValue) {
+    const values = this.value
+      .map(val => val.constructor.name === type ? val : val.findValues(type))
+      .reduce((accum, val) => accum.concat(val), [])
+
+    if (prop) {
+      // filter at end of finding all child values
+      return values.filter(val => matchVals(val, prop, propValue))
+    }
+
+    return values
+  }
+
+  hasValues(type, prop, propValue) {
+    return this.findValues(type, prop, propValue).length > 0
+  }
+
+  firstValue(type, prop, propValue) {
+    // todo
+  }
+
+  findParents(type, prop, propValue) {
+    const parents = [this.parent, ...(this.parent ? this.parent.findParents(type) : [])]
+
+    return parents
+      .filter(parent => parent &&
+        (!type || parent.constructor.name === type) &&
+        (!prop || matchVals(parent, prop, propValue)))
+  }
+
+  hasParents(type, prop, propValue) {
+    return this.findParents(type, prop, propValue).length > 0
+  }
 }
 
 class SelectorValue extends SelectorObj {
@@ -125,6 +166,10 @@ class SelectorValue extends SelectorObj {
 
   format() {
     return this.value
+  }
+
+  findValues(type) {
+    return null
   }
 }
 
@@ -227,14 +272,16 @@ class SelectorPseudo extends SelectorGroup {
     super(parent)
 
     this.useParen = false
+    this._name = null
     this.name = null
     this.curValue = new SelectorPseudoName(this)
   }
 
   valueFinished(lastChar) {
     if (this.curValue) {
-      if (!this.name) {
-        this.name = this.curValue
+      if (!this._name) {
+        this._name = this.curValue
+        this.name = this._name.value
       } else {
         this.value.push(this.curValue)
       }
@@ -261,13 +308,13 @@ class SelectorPseudo extends SelectorGroup {
   ast() {
     return {
       ...super.ast(),
-      name: this.name.value
+      name: this._name.value
     }
   }
 
   format() {
     const children = super.format()
-    const name = this.name.format()
+    const name = this._name.format()
     if (this.useParen) {
       return `${name}(${children})`
     }
@@ -316,10 +363,18 @@ module.exports = (opts = { }) => {
       const selectorObjs = []
 
       for (const selector of decl.selectors) {
-        selectorObjs.push(new Selector(selector))
-      }
+        const sel = new Selector(selector)
+        selectorObjs.push(sel)
 
-      console.log(JSON.stringify([...selectorObjs.map(sel => sel.ast())], null, 2))
+        // console.log(JSON.stringify(sel.ast(), null, 2))
+        // console.log(sel.findValues('SelectorClassName'))
+        // console.log(sel.findValues('SelectorClassName', 'value', 'root'))
+
+        const classNames = sel.findValues('SelectorClassName')
+        for (const className of classNames) {
+          console.log(className.findParents('SelectorPseudo', 'name', ['global', 'local']))
+        }
+      }
     }
 
     /*
