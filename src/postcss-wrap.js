@@ -2,11 +2,11 @@
 const CHAR_MAPPING = {
   '.': 'mapClassStart',
   ':': 'mapPseudoStart',
-  '(': 'mapParentStart',
+  '(': 'mapParenStart',
   ')': 'mapParenEnd',
-  '>': 'mapCurValueEnd',
-  '+': 'mapCurValueEnd',
-  '~': 'mapCurValueEnd',
+  '>': 'mapSpecial',
+  '+': 'mapSpecial',
+  '~': 'mapSpecial',
   '': 'mapWhitespace'
 }
 
@@ -17,27 +17,41 @@ function matchVals(obj, prop, value) {
   return obj[prop] === value
 }
 
+class Char {
+  constructor(char) {
+    this.char = char
+    this.consumed = false
+    this.whitespace = char.trim() === ''
+  }
+
+  consume() {
+    this.consumed = true
+  }
+}
+
 class Mapper {
   executeMapping(char) {
-    const func = CHAR_MAPPING[char] && this[CHAR_MAPPING[char]] || this.default
+    const func = CHAR_MAPPING[char.char] && this[CHAR_MAPPING[char.char]] || this.default
     func.call(this, char)
   }
 
-  default() {}
+  default(char) {
+    char.consume()
+  }
 
-  mapCurValueEnd(char) {
+  mapSpecial(char) {
     this.default(char)
   }
 
   mapWhitespace(char) {
-    this.mapCurValueEnd(char)
+    this.mapSpecial(char)
   }
 
   mapParenEnd(char) {
     this.default(char)
   }
 
-  mapParentStart(char) {
+  mapParenStart(char) {
     this.default(char)
   }
 
@@ -53,6 +67,7 @@ class Mapper {
 class SelectorObj extends Mapper {
   constructor(parent) {
     super()
+    console.log('init', this.constructor.name)
     this.parent = parent
     this.value = []
     this.curValue = null
@@ -65,27 +80,37 @@ class SelectorObj extends Mapper {
     }
   }
 
-  finish(lastChar) {
+  // finish(lastChar) {
+  finish() {
+    console.log('finish', this.constructor.name, this.curValue, this.value)
     if (this.curValue) {
-      const last = this.curValue
-      this.curValue = null // stop propagation
+      this.curValue.finish()
+      this.value.push(this.curValue)
+      // const last = this.curValue
+      // this.curValue = null
 
-      last.finish(lastChar)
-      this.value.push(last)
+      // last.finish(lastChar)
+      // this.value.push(last)
     }
 
-    if (this.parent) {
-      this.parent.valueFinished(lastChar)
-    }
+    // if (this.parent) {
+    //   this.parent.valueFinished(lastChar)
+    // }
   }
 
   next(char) {
     const cur = this.curValue
     if (cur) {
       cur.next(char)
-    } else {
+    } 
+    
+    if (!char.consumed || !cur) {
       this.executeMapping(char)
     }
+  }
+
+  mapSpecial() {
+    this.finish()
   }
 
   ast() {
@@ -118,15 +143,30 @@ class SelectorObj extends Mapper {
 
   firstValue(type, prop, propValue) {
     // todo
+    for (const val of this.value) {
+      if (val.constructor.name === type || (!prop || val[prop] === propValue)) {
+        return val
+      } else {
+        const check = val.firstValue(type, prop, propValue)
+        if (check) {
+          return check
+        }
+      }
+    }
   }
 
   findParents(type, prop, propValue) {
-    const parents = [this.parent, ...(this.parent ? this.parent.findParents(type) : [])]
+    const parents = []
+
+    let cur = this.parent
+    while (cur) {
+      if ((!type || cur.constructor.name === type) && (!prop || matchVals(cur, prop, propValue))) {
+        parents.push(cur)
+      }
+      cur = cur.parent
+    }
 
     return parents
-      .filter(parent => parent &&
-        (!type || parent.constructor.name === type) &&
-        (!prop || matchVals(parent, prop, propValue)))
   }
 
   hasParents(type, prop, propValue) {
@@ -141,20 +181,27 @@ class SelectorValue extends SelectorObj {
     this.value = ''
   }
 
-  mapCurValueEnd(char) {
-    this.finish(char)
+  // mapSpecial(char) {
+  mapSpecial() {
+    // this.finish(char)
+    this.finish()
   }
 
   default(char) {
-    this.value += char
+    this.value += char.char
+    char.consume()
   }
 
-  mapClassStart(char) {
-    this.mapCurValueEnd(char)
+  // mapClassStart(char) {
+  mapClassStart() {
+    // this.mapSpecial(char)
+    this.mapSpecial()
   }
 
-  mapParenEnd(char) {
-    this.mapCurValueEnd(char)
+  // mapParenEnd(char) {
+  mapParenEnd() {
+    // this.mapSpecial(char)
+    this.mapSpecial()
   }
 
   ast() {
@@ -185,13 +232,22 @@ class SelectorClass extends SelectorObj {
     this.curValue = new SelectorClassName(this)
   }
 
-  valueFinished(lastChar) {
-    super.valueFinished(lastChar)
-    if (lastChar === '.') {
-      this.curValue = new SelectorClassName(this)
-    } else if (lastChar === '') {
-      this.finish(lastChar)
-    }
+  // valueFinished(lastChar) {
+  //   super.valueFinished(lastChar)
+  //   if (lastChar === '.') {
+  //     this.curValue = new SelectorClassName(this)
+  //   } else if (lastChar === '') {
+  //     this.finish(lastChar)
+  //   }
+  // }
+
+  mapClassStart(char) {
+    this.curValue = new SelectorClassName(this)
+    char.consume()
+  }
+
+  mapWhitespace() {
+    this.finish()
   }
 
   format() {
@@ -205,15 +261,22 @@ class SelectorGroup extends SelectorObj {
     this.curValue.next(char)
   }
 
-  mapClassStart() {
+  // mapClassStart() {
+  mapClassStart(char) {
     this.curValue = new SelectorClass(this)
+    char.consume()
   }
 
-  mapPseudoStart() {
+  // mapPseudoStart() {
+  mapPseudoStart(char) {
     this.curValue = new SelectorPseudo(this)
+    char.consume()
   }
 
-  mapWhitespace() {}
+  // mapWhitespace() {}
+  mapWhitespace(char) {
+    this.default(char)
+  }
 }
 
 class SelectorElement extends SelectorGroup {
@@ -223,25 +286,29 @@ class SelectorElement extends SelectorGroup {
     this.element = ''
   }
 
-  valueFinished(lastChar) {
-    super.valueFinished(lastChar)
+  // valueFinished(lastChar) {
+  //   super.valueFinished(lastChar)
 
-    if (lastChar === '') {
-      this.finish(lastChar)
-    }
-  }
+  //   if (lastChar === '') {
+  //     this.finish(lastChar)
+  //   }
+  // }
 
   default(char) {
-    this.element += char
+    this.element += char.char
+    char.consume()
   }
 
-  mapCurValueEnd(char) {
-    this.default(char)
-    this.finish(char)
+  // mapSpecial(char) {
+  mapSpecial() {
+    // this.default(char)
+    // this.finish(char)
+    this.finish()
   }
 
   mapWhitespace(char) {
-    this.finish(char)
+    // this.finish(char)
+    this.default(char)
   }
 
   ast() {
@@ -258,8 +325,10 @@ class SelectorElement extends SelectorGroup {
 }
 
 class SelectorPseudoName extends SelectorValue {
-  mapParentStart(char) {
-    this.mapCurValueEnd(char)
+  // mapParenStart(char) {
+  mapParenStart() {
+    // this.mapSpecial(char)
+    this.finish()
   }
 
   format() {
@@ -277,32 +346,41 @@ class SelectorPseudo extends SelectorGroup {
     this.curValue = new SelectorPseudoName(this)
   }
 
-  valueFinished(lastChar) {
-    if (this.curValue) {
-      if (!this._name) {
-        this._name = this.curValue
-        this.name = this._name.value
-      } else {
-        this.value.push(this.curValue)
-      }
-      this.curValue = null
-    }
+  // valueFinished(lastChar) {
+  //   if (this.curValue) {
+  //     if (!this._name) {
+  //       this._name = this.curValue
+  //       this.name = this._name.value
+  //     } else {
+  //       this.value.push(this.curValue)
+  //     }
+  //     this.curValue = null
+  //   }
 
-    if (lastChar === '(') {
-      this.mapParentStart()
-    } else if (lastChar === ')') {
-      this.finish(lastChar)
-    }
-  }
+  //   if (lastChar === '(') {
+  //     this.mapParenStart()
+  //   } else if (lastChar === ')') {
+  //     this.finish(lastChar)
+  //   }
+  // }
 
-  mapWhitespace(char) {
-    if (this.useParen) {
-      this.finish(char)
-    }
-  }
+  // mapWhitespace(char) {
+  //   if (this.useParen) {
+  //     this.finish(char)
+  //   }
+  // }
 
-  mapParentStart() {
+  mapParenStart(char) {
     this.useParen = true
+    char.consume()
+  }
+
+  mapParenEnd(char) {
+    if (this.useParen) {
+      char.consume()
+    }
+
+    this.finish()
   }
 
   ast() {
@@ -332,7 +410,7 @@ class Selector extends SelectorGroup {
 
   iterate() {
     for (const char of this.src) {
-      this.next(char.trim())
+      this.next(new Char(char))
     }
 
     this.finish('')
@@ -366,14 +444,14 @@ module.exports = (opts = { }) => {
         const sel = new Selector(selector)
         selectorObjs.push(sel)
 
-        // console.log(JSON.stringify(sel.ast(), null, 2))
+        console.log('AST:', JSON.stringify(sel.ast(), null, 2))
         // console.log(sel.findValues('SelectorClassName'))
         // console.log(sel.findValues('SelectorClassName', 'value', 'root'))
 
-        const classNames = sel.findValues('SelectorClassName')
-        for (const className of classNames) {
-          console.log(className.findParents('SelectorPseudo', 'name', ['global', 'local']))
-        }
+        // const classNames = sel.findValues('SelectorClassName')
+        // for (const className of classNames) {
+        //   console.log(className.findParents('SelectorPseudo', 'name', ['global', 'local']))
+        // }
       }
     }
 
