@@ -28,5 +28,8 @@
     "sass": "^1.32.7",
     "sass-loader": "^11.0.1",
     "webpack": "^5.22.0"
+  },
+  "dependencies": {
+    "css-selector-parser": "^1.4.1"
   }
 }

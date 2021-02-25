@@ -4,9 +4,9 @@ const CHAR_MAPPING = {
   ':': 'mapPseudoStart',
   '(': 'mapParenStart',
   ')': 'mapParenEnd',
-  '>': 'mapSpecial',
-  '+': 'mapSpecial',
-  '~': 'mapSpecial'
+  '>': 'mapCombinator',
+  '+': 'mapCombinator',
+  '~': 'mapCombinator'
 }
 
 class Char {
@@ -79,7 +79,7 @@ class SelectorPrimitive {
     this.consumeOnlyAndFinish(char)
   }
 
-  mapSpecial(char) {
+  mapCombinator(char) {
     this.consumeOnlyAndFinish(char)
   }
 
@@ -169,7 +169,7 @@ class SelectorGroup extends SelectorPrimitive {
     this.default(char)
   }
 
-  mapSpecial(char) {
+  mapCombinator(char) {
     this.default(char)
   }
 
@@ -217,7 +217,7 @@ class SelectorClassName extends SelectorPrimitive {
     this.finish()
   }
 
-  mapSpecial() {
+  mapCombinator() {
     this.finish()
   }
 
@@ -258,10 +258,14 @@ class SelectorPseudoName extends SelectorPrimitive {
   }
 
   mapPseudoStart(char) {
-    this.consumeOnlyOrFinish(char)
+    if (!this.value || this.value === ':') {
+      this.default(char)
+    } else {
+      this.finish()
+    }
   }
 
-  mapSpecial() {
+  mapCombinator() {
     this.finish()
   }
 
@@ -351,9 +355,15 @@ class Selector extends SelectorGroup {
 function parseSelector(source) {
   const sel = new Selector(source)
 
+  const match = source === sel.format()
+
+  if (!match) {
+    throw new Error('no match')
+  }
+
   // console.log('AST:', JSON.stringify(sel.ast(), null, 2))
-  console.log('source', source)
-  console.log('reform', sel.format())
+  // console.log('source', source)
+  // console.log('reform', sel.format())
   // console.log(sel.findValues('SelectorClassName'))
   // console.log(sel.findValues('SelectorClassName', 'value', 'root'))
 
