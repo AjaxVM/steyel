@@ -128,6 +128,12 @@ class SelectorGroup extends PrimitiveIdentifier {
     return n
   }
 
+  replaceChild(child, other) {
+    // todo: little bit fragile
+    const i = this.children.indexOf(child)
+    this.children[i] = other
+  }
+
   next(char) {
     if (this.finished) {
       return false // don't process this if we finished already
@@ -217,6 +223,9 @@ class PseudoName extends SelectorGroup {
     const n = super.createWrap(child)
     n.value = value
     n.type = type
+    if (child) {
+      n.hasChildren = true
+    }
     return n
   }
 
@@ -356,11 +365,53 @@ class Selector extends SelectorGroup {
   }
 }
 
+function walkFind(node, target, flags = []) {
+  if (node.constructor.name === target) {
+    return {
+      node,
+      flags
+    }
+  }
+
+  if (node.constructor.name === 'PseudoName') {
+    if (node.hasChildren) {
+      // just make a new copy of flags to send to children
+      flags = [
+        ...flags,
+        node.value
+      ]
+    } else {
+      // update global flags
+      flags.push(node.value)
+    }
+  }
+
+  if (node.children) {
+    for (const child of node.children) {
+      const res = walkFind(child, target, flags)
+      if (res) {
+        return {
+          parent: node,
+          ...res
+        }
+      }
+    }
+  }
+}
+
+function getLastMatching(arr, targets) {
+  for (let i=arr.length-1; i >= 0; i--) {
+    if (targets.includes(arr[i])) {
+      return arr[i]
+    }
+  }
+
+  return null
+}
+
 function parseSelector(source) {
   // const sel = new Selector(source, true)
-  const sel = new Selector(source)
-  const out = sel.format()
-
+  // const out = sel.format()
   // const match = source === out
 
   // if (!match) {
@@ -368,10 +419,23 @@ function parseSelector(source) {
   //   throw new Error('no match')
   // }
 
-  console.log('\nhandle selector')
-  console.log('inp:', source)
-  console.log('out:', sel.format())
-  console.log('ast:', JSON.stringify(sel.ast(), null, 2))
+  // TODO: add an opt to the plugin to test or run
+
+  const sel = new Selector(source)
+  // console.log('\nhandle selector')
+  // console.log('inp:', source)
+  // console.log('out:', sel.format())
+  // console.log('ast:', JSON.stringify(sel.ast(), null, 2))
+
+  // find first class, and track whether we have a local/global mod
+  const { parent, node, flags } = walkFind(sel, 'ClassName') || {}
+  const doWrap = !getLastMatching(flags || [], ['local', 'global'])
+  // console.log(source, getLastMatching(flags || [], ['local', 'global']))
+  if (doWrap) {
+    parent.replaceChild(node, PseudoName.createWrap('local', node))
+  }
+
+  console.log(source, '||', parent.format())
 }
 
 module.exports = (opts = { }) => {

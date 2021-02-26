@@ -28,12 +28,14 @@ function deepMerge(objA, objB) {
 const defaultCssLoaderOptions = {
   modules: {
     mode: 'pure',
+    // exportGlobals: true,
     localIdentName: 'steyel-[hash:base64]',
   }
 }
 
 function postProcessing(callback, classes, ...args) {
   const [argTarget, source, ...otherArgs] = args
+  console.log(argTarget, source)
   const fragment = source.match(/\.locals\ *=\ *\{(.*\:.*)\}/msi)
   
   if (!(fragment && fragment.length)) {
