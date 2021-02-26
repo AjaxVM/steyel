@@ -10,12 +10,13 @@ function parseSelector(source) {
   parser.registerNestingOperators('>', '+', '~');
 
   const sel = parser.parse(source)
+  const out = parser.render(sel)
 
-  const match = source === parser.render(sel)
+  const match = source === out
 
   if (!match) {
-    console.log(source)
-    throw new Error('no match')
+    console.log(source, out)
+    // throw new Error('no match')
   }
 
   // console.log('AST:', JSON.stringify(sel.ast(), null, 2))

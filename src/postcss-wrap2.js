@@ -354,11 +354,13 @@ class Selector extends SelectorGroup {
 
 function parseSelector(source) {
   const sel = new Selector(source)
+  const out = sel.format()
 
-  const match = source === sel.format()
+  const match = source === out
 
   if (!match) {
-    throw new Error('no match')
+    console.log(source, out)
+    throw new Error('no match', out)
   }
 
   // console.log('AST:', JSON.stringify(sel.ast(), null, 2))

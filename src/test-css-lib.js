@@ -3,30 +3,45 @@ const postcss = require('postcss')
 // const postCssWrap = require('./postcss-wrap')
 const postCssWrap2 = require('./postcss-wrap2')
 const postCssWrap3 = require('./postcss-wrap3')
+const postCssWrap4 = require('./postcss-wrap4')
 
 const data = `
+div.screwthis {}
+/*
 .root h1 .child {}
 
 .root.active {}
 
-/*:local(.foo) {}
-:global .bar :local(.bat) {}
-
-.monkeys h1 {
-  .apes {}
-}
+div.foo > .monkey {}
 
 @media {
   .somewhere {}
 }
 
-div.foo > .monkey {}
+.monkeys h1 {
+  .apes {}
+}
 
-.root .child :global :local(.monkey) :local(:foo(.march) .funny) .bar.bat (h1 h2) ha ha{}
+.root::first-line {}
 
+.root:hover {}
+*/
+
+/* Invalid Selectors - bomb out #3 */
+
+/*
 :local(.root) :global .monkey .banana {}
 
-.root::first-line {}*/
+:something.foo {}
+
+div.foo >.monkey {}
+
+:local(.foo) {}
+
+:global .bar :local(.bat) {}
+
+.root .child :global :local(.monkey) :local(:foo(.march) .funny) .bar.bat (h1 h2) ha ha{}
+*/
 `
 
 // const stuff = css(data)
@@ -67,5 +82,8 @@ async function test(plugin, name, n=100) {
   })
 }
 
-test(postCssWrap2, 'postCssWrap2')
-test(postCssWrap3, 'postCssWrap3')
+// test(postCssWrap2, 'postCssWrap2')
+// test(postCssWrap3, 'postCssWrap3')
+// test(postCssWrap4, 'postCssWrap4')
+
+run(postCssWrap4)
