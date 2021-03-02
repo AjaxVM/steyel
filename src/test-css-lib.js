@@ -45,6 +45,8 @@ div.foo >.monkey {}
 :local(:global .funky) {}
 `
 
+const isolatedCase = 'div.foo > .monkey {}'
+
 // const stuff = css(data)
 // console.log(stuff)
 
@@ -88,3 +90,4 @@ async function test(plugin, name, n=100, data) {
 // test(postCssWrap4, 'postCssWrap4')
 
 run(postCssWrap4, edgeCaseData)
+// run(postCssWrap4, isolatedCase)

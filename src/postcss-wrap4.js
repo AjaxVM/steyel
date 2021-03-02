@@ -399,6 +399,36 @@ function walkFind(node, target, flags = []) {
   }
 }
 
+function findAll(node, target, flags = [], parent) {
+  if (node.constructor.name === target) {
+    return [{
+      node,
+      parent
+    }]
+  }
+
+  if (node.constructor.name === 'PseudoName') {
+    if (node.hasChildren) {
+      // just make a new copy of flags to send to children
+      flags = [
+        ...flags,
+        node.value
+      ]
+    } else {
+      // update global flags
+      flags.push(node.value)
+    }
+  }
+
+  let out = []
+  if (node.children) {
+    for (const child of node.children) {
+      out = [...out, ...findAll(child, target, flags, node)]
+    }
+  }
+  return out
+}
+
 function getLastMatching(arr, targets) {
   for (let i=arr.length-1; i >= 0; i--) {
     if (targets.includes(arr[i])) {
@@ -428,14 +458,33 @@ function parseSelector(source) {
   // console.log('ast:', JSON.stringify(sel.ast(), null, 2))
 
   // find first class, and track whether we have a local/global mod
-  const { parent, node, flags } = walkFind(sel, 'ClassName') || {}
-  const doWrap = !getLastMatching(flags || [], ['local', 'global'])
-  // console.log(source, getLastMatching(flags || [], ['local', 'global']))
-  if (doWrap) {
-    parent.replaceChild(node, PseudoName.createWrap('local', node))
-  }
+  // const { parent, node, flags } = walkFind(sel, 'ClassName') || {}
+  // const doWrap = !getLastMatching(flags || [], ['local', 'global'])
+  // // console.log(source, getLastMatching(flags || [], ['local', 'global']))
+  // if (doWrap) {
+  //   parent.replaceChild(node, PseudoName.createWrap('local', node))
+  // }
 
-  console.log(source, '||', parent.format())
+  const classNodes = findAll(sel, 'ClassName')
+  classNodes.map((node, i) => {
+    if (!i) {
+      if (!getLastMatching(node.flags || [], ['local', 'global'])) {
+        // node.parent.replaceChild(node.node, PseudoName.createWrap('local', node.node))
+        node.parent.children.splice(
+          node.parent.children.indexOf(node.node),
+          0,
+          PseudoName.createWrap('local')
+        )
+      }
+    } else {
+      if (!getLastMatching(node.flags || [], ['local', 'global'])) {
+        node.parent.replaceChild(node.node, PseudoName.createWrap('global', node.node))
+      }
+    }
+  })
+
+  // console.log(source, '\n\t', sel.format())
+  return sel.format()
 }
 
 module.exports = (opts = { }) => {
@@ -445,9 +494,10 @@ module.exports = (opts = { }) => {
       // The faster way to find Declaration node
       const selectorObjs = []
 
-      for (const selector of decl.selectors) {
-        parseSelector(selector)
-      }
+      // for (const selector of decl.selectors) {
+      //   parseSelector(selector)
+      // }
+      decl.selectors = decl.selectors.map(selector => parseSelector(selector))
     }
   }
 }

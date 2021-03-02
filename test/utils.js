@@ -4,6 +4,7 @@ const { createFsFromVolume, Volume } = require('memfs')
 
 module.exports = {
   getCompiler: (fixture, config = {}) => {
+    const preLoaders = config.preLoaders || []
     const compiler = webpack({
       context: __dirname,
       entry: `./${fixture}`,
@@ -15,10 +16,26 @@ module.exports = {
         rules: [
           {
             test: config.test || /\.css$/,
-            use: [{
-              loader: path.resolve(__dirname, '../src'),
-              options: config.options,
-            }].concat(config.preLoaders || []),
+            use: [
+              {
+                loader: 'css-loader',
+                options: {
+                  modules: {
+                    mode: 'pure',
+                    exportGlobals: true
+                  },
+                  importLoaders: preLoaders.length + 1 // always do our module as well
+                }
+              },
+              {
+                loader: path.resolve(__dirname, '../src')
+              },
+              ...preLoaders
+            ]
+            // use: [{
+            //   loader: path.resolve(__dirname, '../src'),
+            //   options: config.options,
+            // }].concat(config.preLoaders || []),
           },
         ],
       },
